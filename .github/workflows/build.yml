@@ -1,4 +1,4 @@
-name: KGZ Mobile Full Build (Launcher & Client)
+name: KGZ Mobile Safe Build
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-all:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,30 +31,26 @@ jobs:
         ndk: 25.1.8937393
         cmake: 3.22.1
 
-    - name: 5. Сборка модуля LAUNCHER
+    - name: 5. Сборка LAUNCHER
       run: |
         if [ -d "launcher" ]; then
           cd launcher
-          gradle wrapper --gradle-version 7.4
-          chmod +x gradlew
-          ./gradlew assembleDebug || echo "Ошибка сборки лаунчера, пропускаем..."
+          # Берем стабильный дистрибутив gradle из системы, не ломая локальные файлы
+          gradle assembleDebug --no-daemon || echo "Лаунчер не собрался, проверяем клиент..."
           cd ..
         fi
 
-    - name: 6. Сборка модуля CLIENT (Android)
+    - name: 6. Сборка CLIENT (Android)
       run: |
         if [ -d "android" ]; then
           cd android
-          gradle wrapper --gradle-version 7.4
-          chmod +x gradlew
-          ./gradlew assembleDebug || echo "Ошибка сборки клиента, пропускаем..."
+          gradle assembleDebug --no-daemon || echo "Клиент не собрался."
           cd ..
         fi
 
-    - name: 7. Выгрузка всех готовых APK
+    - name: 7. Выгрузка результатов
       uses: actions/upload-artifact@v4
       with:
-        name: kgz-mobile-build-package
+        name: kgz-mobile-apks
         path: |
-          **/build/outputs/apk/debug/*.apk
-          **/build/outputs/apk/release/*.apk
+          **/build/outputs/apk/**/*.apk
