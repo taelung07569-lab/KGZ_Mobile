@@ -1,4 +1,4 @@
-name: KGZ Mobile Force Old Gradle
+name: KGZ Mobile Java 11 Build
 
 on:
   push:
@@ -16,28 +16,38 @@ jobs:
     - name: 2. Распаковка архива
       run: unzip -o project.zip
 
-    - name: 3. Настройка Java 17
+    - name: 3. Настройка Java 11 (Оружие для старых CRMP)
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '11'
 
-    - name: 4. Принудительная установка Gradle 7.4.2
+    - name: 4. Настройка Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: 5. Установка Gradle 7.4.2
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '7.4.2'
 
-    - name: 5. Сборка Лаунчера
+    - name: 6. Чтение настроек проекта (Диагностика)
+      run: |
+        echo "=== LAUNCHER SETTINGS ==="
+        cat launcher/settings.gradle.kts || true
+        echo "=== LAUNCHER BUILD ==="
+        cat launcher/build.gradle.kts || true
+
+    - name: 7. Сборка Лаунчера (Полный лог)
       run: |
         cd launcher
-        gradle assembleDebug --no-daemon
+        gradle assembleDebug --stacktrace
 
-    - name: 6. Сборка Клиента
+    - name: 8. Сборка Клиента (Полный лог)
       run: |
         cd android
-        gradle assembleDebug --no-daemon || echo "Клиент пока пропускаем"
+        gradle assembleDebug --stacktrace || echo "Клиент пропускаем"
 
-    - name: 7. Сохранение готовых APK
+    - name: 9. Сохранение APK
       uses: actions/upload-artifact@v4
       with:
         name: kgz-mobile-apks
