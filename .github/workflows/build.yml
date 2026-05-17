@@ -1,4 +1,4 @@
-name: KGZ Mobile Safe Build
+name: KGZ Mobile True Build
 
 on:
   push:
@@ -23,34 +23,28 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: 4. Настройка Android SDK, NDK и CMake
+    - name: 4. Настройка Android SDK
       uses: android-actions/setup-android@v3
       with:
         api-level: 34
         build-tools: 34.0.0
-        ndk: 25.1.8937393
-        cmake: 3.22.1
 
     - name: 5. Сборка LAUNCHER
       run: |
         if [ -d "launcher" ]; then
           cd launcher
-          # Берем стабильный дистрибутив gradle из системы, не ломая локальные файлы
-          gradle assembleDebug --no-daemon || echo "Лаунчер не собрался, проверяем клиент..."
+          # Генерируем родной wrapper для Kotlin DSL проекта
+          gradle wrapper --gradle-version 7.5 --distribution-type all
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
           cd ..
+        else
+          echo "Папка launcher не найдена!"
+          exit 1
         fi
 
-    - name: 6. Сборка CLIENT (Android)
-      run: |
-        if [ -d "android" ]; then
-          cd android
-          gradle assembleDebug --no-daemon || echo "Клиент не собрался."
-          cd ..
-        fi
-
-    - name: 7. Выгрузка результатов
+    - name: 6. Выгрузка готового APK Лаунчера
       uses: actions/upload-artifact@v4
       with:
-        name: kgz-mobile-apks
-        path: |
-          **/build/outputs/apk/**/*.apk
+        name: kgz-launcher-apk
+        path: launcher/app/build/outputs/apk/debug/*.apk
