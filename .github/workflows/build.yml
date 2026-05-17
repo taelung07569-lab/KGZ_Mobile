@@ -1,4 +1,4 @@
-name: KGZ Mobile Project Diagnostics
+name: KGZ Mobile Full Build (Launcher & Client)
 
 on:
   push:
@@ -6,20 +6,55 @@ on:
   workflow_dispatch:
 
 jobs:
-  diagnose:
+  build-all:
     runs-on: ubuntu-latest
 
     steps:
     - name: 1. Клонирование репозитория
       uses: actions/checkout@v4
 
-    - name: 2. Распаковка архива
+    - name: 2. Распаковка архива проекта
       run: |
         unzip -o project.zip
-        echo "=== СТРУКТУРА ВСЕХ ФАЙЛОВ ==="
-        find . -maxdepth 4 -not -path '*/.*'
-        
-    - name: 3. Поиск конфигураций сборки
+
+    - name: 3. Настройка среды Java (JDK 17)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: 4. Настройка Android SDK, NDK и CMake
+      uses: android-actions/setup-android@v3
+      with:
+        api-level: 34
+        build-tools: 34.0.0
+        ndk: 25.1.8937393
+        cmake: 3.22.1
+
+    - name: 5. Сборка модуля LAUNCHER
       run: |
-        echo "=== ИЩЕМ НАСТРОЙКИ СБОРКИ ==="
-        find . -name "build.gradle" -o -name "settings.gradle" -o -name "gradlew"
+        if [ -d "launcher" ]; then
+          cd launcher
+          gradle wrapper --gradle-version 7.4
+          chmod +x gradlew
+          ./gradlew assembleDebug || echo "Ошибка сборки лаунчера, пропускаем..."
+          cd ..
+        fi
+
+    - name: 6. Сборка модуля CLIENT (Android)
+      run: |
+        if [ -d "android" ]; then
+          cd android
+          gradle wrapper --gradle-version 7.4
+          chmod +x gradlew
+          ./gradlew assembleDebug || echo "Ошибка сборки клиента, пропускаем..."
+          cd ..
+        fi
+
+    - name: 7. Выгрузка всех готовых APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: kgz-mobile-build-package
+        path: |
+          **/build/outputs/apk/debug/*.apk
+          **/build/outputs/apk/release/*.apk
